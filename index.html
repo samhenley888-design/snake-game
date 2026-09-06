@@ -29,14 +29,14 @@
     </header>
 
     <main class="stage">
-      <canvas id="game" width="400" height="400" aria-label="Snake game board"></canvas>
+      <canvas id="game" width="400" height="400" tabindex="0" aria-label="Snake game board"></canvas>
       <div class="overlay" id="overlay">
         <div class="overlay-card" id="overlay-card">
           <p class="overlay-kicker" id="overlay-kicker">Ready</p>
           <h2 id="overlay-title">Snake</h2>
-          <p class="overlay-text" id="overlay-text">Use arrow keys or WASD to move. Eat the glowing orbs. Don't hit the walls—or yourself.</p>
+          <p class="overlay-text" id="overlay-text">Click Start Game first — the snake moves on its own. Then steer with arrows or WASD.</p>
           <button type="button" class="btn" id="restart-btn">Start Game</button>
-          <p class="hint">Press <kbd>Space</kbd> or <kbd>R</kbd> to start / restart</p>
+          <p class="hint">After start, arrows / WASD steer · <kbd>Space</kbd> / <kbd>R</kbd> restart</p>
         </div>
       </div>
     </main>
