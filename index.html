@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache" />
   <title>Snake</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=3" />
 </head>
 <body>
   <div class="app">
@@ -31,24 +32,220 @@
     <main class="stage">
       <canvas id="game" width="400" height="400" tabindex="0" aria-label="Snake game board"></canvas>
       <div class="overlay" id="overlay">
-        <div class="overlay-card" id="overlay-card">
+        <div class="overlay-card">
           <p class="overlay-kicker" id="overlay-kicker">Ready</p>
           <h2 id="overlay-title">Snake</h2>
-          <p class="overlay-text" id="overlay-text">Click Start Game first — the snake moves on its own. Then steer with arrows or WASD.</p>
+          <p class="overlay-text" id="overlay-text">Click Start. The snake crawls by itself — then steer with arrows or WASD.</p>
           <button type="button" class="btn" id="restart-btn">Start Game</button>
-          <p class="hint">After start, arrows / WASD steer · <kbd>Space</kbd> / <kbd>R</kbd> restart</p>
+          <p class="hint">Space / R also starts · arrows / WASD steer</p>
         </div>
       </div>
     </main>
 
     <footer class="footer">
       <div class="controls">
-        <span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+        <span id="status">Press Start</span>
         <span class="dot">·</span>
-        <span><kbd>Space</kbd> / <kbd>R</kbd> restart</span>
+        <span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> / <kbd>WASD</kbd></span>
       </div>
     </footer>
   </div>
-  <script src="game.js"></script>
+  <script>
+(() => {
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const scoreEl = document.getElementById("score");
+  const bestEl = document.getElementById("best");
+  const statusEl = document.getElementById("status");
+  const overlay = document.getElementById("overlay");
+  const overlayKicker = document.getElementById("overlay-kicker");
+  const overlayTitle = document.getElementById("overlay-title");
+  const overlayText = document.getElementById("overlay-text");
+  const restartBtn = document.getElementById("restart-btn");
+
+  const GRID = 20;
+  const CELL = 20; // canvas is 400x400
+  const STEP_MS = 120;
+  const BEST_KEY = "snake-best-v3";
+
+  const DIRS = {
+    ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+    w: [0, -1], W: [0, -1], s: [0, 1], S: [0, 1],
+    a: [-1, 0], A: [-1, 0], d: [1, 0], D: [1, 0],
+  };
+
+  let snake, dx, dy, nextDx, nextDy, food, score, running;
+  let best = Number(localStorage.getItem(BEST_KEY) || 0);
+  let timer = 0;
+  let lastStep = 0;
+  bestEl.textContent = String(best);
+
+  function hideOverlay() {
+    overlay.classList.add("hidden");
+  }
+  function showOverlay(kicker, title, text, button) {
+    overlayKicker.textContent = kicker;
+    overlayTitle.textContent = title;
+    overlayText.textContent = text;
+    restartBtn.textContent = button;
+    overlay.classList.remove("hidden");
+  }
+
+  function placeFood() {
+    for (;;) {
+      const x = (Math.random() * GRID) | 0;
+      const y = (Math.random() * GRID) | 0;
+      if (!snake.some((p) => p[0] === x && p[1] === y)) {
+        food = [x, y];
+        return;
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, 400, 400);
+    ctx.fillStyle = "rgba(148,163,184,0.04)";
+    for (let y = 0; y < GRID; y++) {
+      for (let x = 0; x < GRID; x++) {
+        if (((x + y) & 1) === 0) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+      }
+    }
+
+    // food
+    ctx.fillStyle = "#fbbf24";
+    ctx.beginPath();
+    ctx.arc(food[0] * CELL + 10, food[1] * CELL + 10, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // snake
+    for (let i = 0; i < snake.length; i++) {
+      const [x, y] = snake[i];
+      ctx.fillStyle = i === 0 ? "#6ee7b7" : "#34d399";
+      ctx.fillRect(x * CELL + 2, y * CELL + 2, CELL - 4, CELL - 4);
+    }
+  }
+
+  function gameOver() {
+    running = false;
+    const isBest = score > best;
+    if (isBest) {
+      best = score;
+      localStorage.setItem(BEST_KEY, String(best));
+      bestEl.textContent = String(best);
+    }
+    statusEl.textContent = "Game over";
+    showOverlay(
+      "Game Over",
+      score ? "Score " + score : "Ouch!",
+      isBest ? "New best! Press Start to play again." : "Press Start to try again.",
+      "Play Again"
+    );
+    draw();
+  }
+
+  function step() {
+    if (!running) return;
+
+    // apply queued turn (no 180s)
+    if (nextDx !== -dx || nextDy !== -dy) {
+      dx = nextDx;
+      dy = nextDy;
+    }
+
+    const hx = snake[0][0] + dx;
+    const hy = snake[0][1] + dy;
+
+    if (hx < 0 || hy < 0 || hx >= GRID || hy >= GRID) {
+      gameOver();
+      return;
+    }
+    if (snake.some((p) => p[0] === hx && p[1] === hy)) {
+      gameOver();
+      return;
+    }
+
+    snake.unshift([hx, hy]);
+    if (hx === food[0] && hy === food[1]) {
+      score += 1;
+      scoreEl.textContent = String(score);
+      placeFood();
+    } else {
+      snake.pop();
+    }
+
+    statusEl.textContent = "Moving · head " + hx + "," + hy;
+    draw();
+  }
+
+  function loop(ts) {
+    timer = requestAnimationFrame(loop);
+    if (!running) return;
+    if (!lastStep) lastStep = ts;
+    if (ts - lastStep >= STEP_MS) {
+      lastStep = ts;
+      step();
+    }
+  }
+
+  function start(dir) {
+    snake = [[10, 10], [9, 10], [8, 10]];
+    dx = 1; dy = 0; nextDx = 1; nextDy = 0;
+    if (dir) {
+      const [ndx, ndy] = dir;
+      // don't start left into the body
+      if (!(ndx === -1 && ndy === 0)) {
+        dx = ndx; dy = ndy; nextDx = ndx; nextDy = ndy;
+      }
+    }
+    score = 0;
+    scoreEl.textContent = "0";
+    running = true;
+    lastStep = 0;
+    placeFood();
+    hideOverlay();
+    statusEl.textContent = "Moving";
+    canvas.focus();
+    draw();
+    // move right away so you see motion even before the next frame budget
+    step();
+    step();
+  }
+
+  function onKey(e) {
+    if (e.key === " " || e.key === "Spacebar" || e.key === "r" || e.key === "R") {
+      e.preventDefault();
+      start();
+      return;
+    }
+    const dir = DIRS[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    if (!running) {
+      start(dir);
+      return;
+    }
+    const [ndx, ndy] = dir;
+    if (ndx === -dx && ndy === -dy) return;
+    nextDx = ndx;
+    nextDy = ndy;
+  }
+
+  restartBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    start();
+  });
+  window.addEventListener("keydown", onKey);
+  canvas.addEventListener("keydown", onKey);
+
+  // idle board
+  snake = [[10, 10], [9, 10], [8, 10]];
+  food = [14, 8];
+  dx = 1; dy = 0; nextDx = 1; nextDy = 0;
+  score = 0;
+  running = false;
+  draw();
+  requestAnimationFrame(loop);
+})();
+  </script>
 </body>
 </html>
