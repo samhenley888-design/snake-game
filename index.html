@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">🐍</span>
+        <h1>Snake</h1>
+      </div>
+      <div class="scores">
+        <div class="score-card">
+          <span class="label">Score</span>
+          <span class="value" id="score">0</span>
+        </div>
+        <div class="score-card">
+          <span class="label">Best</span>
+          <span class="value" id="best">0</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="stage">
+      <canvas id="game" width="400" height="400" aria-label="Snake game board"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="overlay-card" id="overlay-card">
+          <p class="overlay-kicker" id="overlay-kicker">Ready</p>
+          <h2 id="overlay-title">Snake</h2>
+          <p class="overlay-text" id="overlay-text">Use arrow keys or WASD to move. Eat the glowing orbs. Don't hit the walls—or yourself.</p>
+          <button type="button" class="btn" id="restart-btn">Start Game</button>
+          <p class="hint">Press <kbd>Space</kbd> or <kbd>R</kbd> to start / restart</p>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="controls">
+        <span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+        <span class="dot">·</span>
+        <span><kbd>Space</kbd> / <kbd>R</kbd> restart</span>
+      </div>
+    </footer>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
