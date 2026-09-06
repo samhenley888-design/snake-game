@@ -113,7 +113,7 @@
     });
   }
 
-  function queueOpposite(a, b) {
+  function isOpposite(a, b) {
     return a.x === -b.x && a.y === -b.y;
   }
 
@@ -278,11 +278,14 @@
     if (!nextDir) return;
 
     event.preventDefault();
-    if (!running && !gameOver) {
-      // Allow first move from start screen if desired — still require start
+    if (!running) {
+      if (gameOver) return;
+      // First direction key starts the game moving that way
+      resetGame();
+      pendingDirection = { ...nextDir };
+      direction = { ...nextDir };
       return;
     }
-    if (!running) return;
 
     if (!isOpposite(nextDir, direction)) {
       pendingDirection = nextDir;
